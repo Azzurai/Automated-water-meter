@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register - Smart Water Meter</title>
+  <style>
+    body {
+      background: linear-gradient(to bottom right, #e0f7fa, #ffffff);
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+      text-align: center;
+      width: 300px;
+    }
+
+    input, select, button {
+      display: block;
+      width: 100%;
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 14px;
+    }
+
+    button {
+      background-color: #0288d1;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0277bd;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Register</h2>
+    <input type="email" id="email" placeholder="Email" required>
+    <input type="password" id="password" placeholder="Password" required>
+    <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+
+    <label for="role">Select Role:</label>
+    <select id="role">
+      <option value="user">User</option>
+      <option value="admin">Admin</option>
+    </select>
+
+    <button onclick="register()">Register</button>
+    <p><a href="login.html">Already have an account? Login</a></p>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <!--Config firebase -->
+  <script src="firebase-config.js"></script>
+
+  <!-- Register-->
+  <script>
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    function register() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const confirmPassword = document.getElementById("confirmPassword").value.trim();
+      const role = document.getElementById("role").value;
+
+      if (!email || !password || !confirmPassword) {
+        return alert("Please fill in all fields.");
+      }
+
+      if (password !== confirmPassword) {
+        return alert("Passwords do not match.");
+      }
+
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(userCred => {
+          const uid = userCred.user.uid;
+          return db.ref("users/" + uid).set({
+            email: email,
+            role: role,
+            usage: {}
+          });
+        })
+        .then(() => {
+          alert("Registration successful!");
+          window.location.href = "login.html";
+        })
+        .catch(error => {
+          alert("Registration failed: " + error.message);
+        });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>User Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Firebase & Chart Libraries -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="firebase-config.js"></script>
+</head>
+<body>
+  <header>
+    <h1>User Dashboard</h1>
+    <button onclick="logout()">Logout</button>
+  </header>
+
+  <main class="dashboard">
+    <p>Welcome, <span id="userEmail">-</span></p>
+    <p>Water Used: <span id="liters">0</span> L</p>
+    <p>Total Price: RM <span id="price">0</span></p>
+    <p style="font-size: 14px; color: #1b8694;">
+      (First 20m³ × RM0.57, next 15m³ × RM1.03, rest × RM2.00)
+    </p>
+
+    <canvas id="usageChart" width="400" height="200" style="margin-top:20px;"></canvas>
+
+    <div style="margin-top: 20px;">
+      <button onclick="fakePay()">Pay Bill</button>
+      <button onclick="downloadPDF()">Download PDF</button>
+      <button onclick="downloadCSV()">Export CSV</button>
+    </div>
+  </main>
+
+  <!-- Logout-->
+  <script>
+    const auth = firebase.auth();
+    function logout() {
+      auth.signOut().then(() => {
+        window.location.href = "login.html";
+      }).catch((error) => {
+        alert("Logout error: " + error.message);
+      });
+    }
+  </script>
+
+  <script src="dashboard.js"></script>
+  <script src="extras.js"></script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Profile Settings</title>
+  <link rel="stylesheet" href="style-dashboard.css">
+</head>
+<body>
+  <header>
+    <h1>User Profile</h1>
+    <button onclick="logout()">Logout</button>
+  </header>
+
+  <main class="dashboard">
+    <h2>Update Your Profile</h2>
+
+    <label for="name">Name:</label><br />
+    <input type="text" id="name" placeholder="Your Name"><br /><br />
+
+    <label for="contact">Contact (Optional):</label><br />
+    <input type="text" id="contact" placeholder="Phone or Telegram"><br /><br />
+
+    <label for="newPassword">New Password (Optional):</label><br />
+    <input type="password" id="newPassword" placeholder="Leave blank to keep current"><br /><br />
+
+    <button onclick="updateProfile()">Save Changes</button>
+  </main>
+
+  <script src="firebase-config.js"></script>
+  <script>
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    auth.onAuthStateChanged(user => {
+      if (!user) return (window.location.href = "login.html");
+
+      const uid = user.uid;
+      db.ref("users/" + uid).once("value").then(snapshot => {
+        const data = snapshot.val();
+        document.getElementById("name").value = data.name || "";
+        document.getElementById("contact").value = data.contact || "";
+      });
+    });
+
+    function updateProfile() {
+      const name = document.getElementById("name").value;
+      const contact = document.getElementById("contact").value;
+      const newPassword = document.getElementById("newPassword").value;
+      const user = auth.currentUser;
+
+      if (!user) return alert("No user found");
+
+      const updates = { name, contact };
+      db.ref("users/" + user.uid).update(updates)
+        .then(() => {
+          if (newPassword) {
+            return user.updatePassword(newPassword);
+          }
+        })
+        .then(() => {
+          alert("Profile updated!");
+          location.reload();
+        })
+        .catch(error => alert("Error: " + error.message));
+    }
+
+    function logout() {
+      auth.signOut().then(() => {
+        window.location.href = "login.html";
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(to bottom right, #e0f7fa, #ffffff);
+  color: #333;
+}
+
+header {
+  background-color: #0288d1;
+  color: white;
+  padding: 20px;
+  text-align: center;
+  font-size: 24px;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+header h1 {
+  margin: 0;
+  flex-grow: 1;
+}
+
+header button {
+  margin-right: 20px;
+  padding: 10px 15px;
+  background-color: #ffffff;
+  color: #0288d1;
+  font-weight: bold;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+main.dashboard {
+  max-width: 600px;
+  margin: 60px auto;
+  background: white;
+  padding: 30px;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+main.dashboard p {
+  font-size: 18px;
+  margin: 10px 0;
+}
+
+button {
+  padding: 10px 16px;
+  margin: 10px 5px;
+  background-color: #0288d1;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+button:hover {
+  background-color: #0277bd;
+}
+
+canvas#usageChart {
+  margin-top: 20px;
+  max-width: 100%;
+}
+
+@media (max-width: 600px) {
+  main.dashboard {
+    margin: 30px 20px;
+    padding: 20px;
+  }
+
+  button {
+    width: 100%;
+    margin: 10px 0;
+  }
+
+  header {
+    flex-direction: column;
+  }
+}

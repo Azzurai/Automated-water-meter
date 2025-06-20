@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style-dashboard.css">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Admin Dashboard</h1>
+    <button onclick="logout()">Logout</button>
+  </header>
+
+  <main class="dashboard">
+    <h2>User Management</h2>
+
+    <input type="text" id="searchInput" placeholder="Search user by email" oninput="filterUsers()" style="width: 100%; padding: 10px; margin: 15px 0; font-size: 16px;">
+
+    <table>
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Water Used (L)</th>
+          <th>Total (RM)</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="userTableBody">
+        <!-- Filled by JS -->
+      </tbody>
+    </table>
+
+    <button onclick="downloadCSV()">Download All as CSV</button>
+  </main>
+
+  <!-- Logout-->
+  <script>
+    const auth = firebase.auth();
+    function logout() {
+      auth.signOut().then(() => {
+        window.location.href = "login.html";
+      }).catch((error) => {
+        alert("Logout error: " + error.message);
+      });
+    }
+  </script>
+
+  <script src="admin-dashboard.js"></script>
+</body>
+</html>
