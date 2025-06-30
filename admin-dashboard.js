@@ -1,26 +1,141 @@
+// === ADMIN-DASHBOARD.JS (FINAL COMBINED VERSION) ===
+
 const auth = firebase.auth();
 const db = firebase.database();
+let allUsersData = []; // Global for CSV/Search functions
 
+// === ONE AUTH LISTENER TO RULE THEM ALL ===
+// This runs once when the page loads to check login and role.
 auth.onAuthStateChanged(user => {
-  if (!user) return (window.location.href = "login.html");
-
-  db.ref("users/" + user.uid).once("value").then(snapshot => {
-    const role = snapshot.val()?.role;
-    if (!role) return (window.location.href = "login.html");
-
-    if (role === "admin") {
-      // Redirect to admin dashboard if on user dashboard
-      if (window.location.pathname.includes("dashboard.html")) {
-        window.location.href = "admin-dashboard.html";
-      }
-    } else if (role === "user") {
-      // Redirect to user dashboard if on admin
-      if (window.location.pathname.includes("admin-dashboard.html")) {
-        window.location.href = "dashboard.html";
-      }
+    if (!user) {
+        window.location.href = "login.html"; // Not logged in
+        return;
     }
-  });
+    db.ref('users/' + user.uid).once('value').then(snapshot => {
+        if (snapshot.val()?.role !== 'admin') {
+            console.error("Access Denied. User is not an admin.");
+            window.location.href = "dashboard.html"; // Redirect non-admins
+            return;
+        }
+        // User is confirmed as an admin, now fetch all the data.
+        fetchAllData();
+    });
 });
+
+// Fetches ALL users and ALL meter readings, then combines them.
+function fetchAllData() {
+    Promise.all([
+        db.ref('users').once('value'),
+        db.ref('meter_readings').once('value')
+    ]).then(([usersSnapshot, metersSnapshot]) => {
+        const userList = usersSnapshot.val();
+        const meterReadings = metersSnapshot.val() || {}; // Use empty object if no readings exist
+        allUsersData = [];
+
+        // Pre-calculate totals for every meter for efficiency
+        const meterTotals = {};
+        for (const meterId in meterReadings) {
+            meterTotals[meterId] = Object.values(meterReadings[meterId]).reduce((sum, reading) => sum + reading.value, 0);
+        }
+
+        // Combine user data with their meter totals
+        for (const uid in userList) {
+            if (userList[uid].role === 'user') {
+                const userProfile = userList[uid];
+                const meterId = userProfile.meterId;
+                const totalLiters = meterTotals[meterId] || 0;
+                
+                allUsersData.push({
+                    uid: uid,
+                    email: userProfile.email,
+                    meterId: meterId || 'N/A',
+                    totalLiters: totalLiters,
+                    totalPrice: calculateTieredPrice(totalLiters)
+                });
+            }
+        }
+        renderTable(allUsersData);
+    });
+}
+
+// Renders the data into the HTML table
+function renderTable(users) {
+    const tableBody = document.getElementById('userTableBody');
+    tableBody.innerHTML = '';
+    users.forEach(user => {
+        const row = document.createElement('tr');
+        // Added data-meter-id attribute to use in our functions
+        row.innerHTML = `
+            <td>${user.email}</td>
+            <td>${user.totalLiters.toFixed(2)}</td>
+            <td>RM ${user.totalPrice}</td>
+            <td>
+                <button onclick="resetUsage('${user.uid}', '${user.meterId}')">Reset</button>
+                <button onclick="deleteUser('${user.uid}')">Delete</button>
+            </td>`;
+        tableBody.appendChild(row);
+    });
+}
+
+// === YOUR HELPER FUNCTIONS, ADAPTED & IMPROVED ===
+
+// ** NEW **: Now resets the data from the CORRECT location
+function resetUsage(uid, meterId) {
+    if (!meterId || meterId === 'N/A') {
+        alert("Cannot reset usage: user does not have a meter assigned.");
+        return;
+    }
+    if (confirm(`Are you sure you want to reset all usage data for meter "${meterId}"? This cannot be undone.`)) {
+        // This removes the entire record from the meter_readings collection
+        db.ref("meter_readings/" + meterId).remove()
+            .then(() => {
+                alert("Usage reset successfully.");
+                location.reload(); // Refresh the page to show the changes
+            })
+            .catch(error => {
+                console.error("Error resetting usage: ", error);
+                alert("An error occurred. Check console for details.");
+            });
+    }
+}
+
+// This function is still correct.
+function deleteUser(uid) {
+  if (confirm("Are you sure you want to delete this user entirely? This cannot be undone.")) {
+    db.ref("users/" + uid).remove()
+        .then(() => {
+            alert("User deleted successfully.");
+            // Also good to delete their meter readings if they are deleted
+            // This is optional and depends on your business logic. For now, we'll just reload.
+            location.reload(); 
+        })
+        .catch(error => {
+            console.error("Error deleting user: ", error);
+        });
+  }
+}
+
+function filterUsers() {
+    const search = document.getElementById("searchInput").value.toLowerCase();
+    const rows = document.querySelectorAll("#userTableBody tr");
+    rows.forEach(row => {
+        const emailCell = row.cells[0];
+        row.style.display = emailCell && emailCell.textContent.toLowerCase().includes(search) ? "" : "none";
+    });
+}
+
+function downloadCSV() {
+    let csvContent = "data:text/csv;charset=utf-8,Email,Water Used (L),Total Bill (RM)\n";
+    allUsersData.forEach(user => {
+        csvContent += `${user.email},${user.totalLiters.toFixed(2)},${user.totalPrice}\n`;
+    });
+    const link = document.createElement("a");
+    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("download", "all_user_usage_report.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
 
 function calculateTieredPrice(totalLiters) {
   const totalM3 = totalLiters / 1000;
@@ -40,82 +155,3 @@ function logout() {
     window.location.href = "login.html";
   });
 }
-
-function resetUsage(uid) {
-  if (confirm("Reset usage for this user?")) {
-    db.ref("users/" + uid + "/usage").remove();
-    location.reload();
-  }
-}
-
-function deleteUser(uid) {
-  if (confirm("Delete this user?")) {
-    db.ref("users/" + uid).remove();
-    location.reload();
-  }
-}
-
-function downloadCSV() {
-  const rows = [["Email", "Water Used (L)", "Total (RM)"]];
-  for (const user of window.allUserData) {
-    rows.push([user.email, user.totalLiters, user.totalPrice]);
-  }
-  const csvContent = rows.map(e => e.join(",")).join("\n");
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "water_meter_users.csv";
-  link.click();
-}
-
-function filterUsers() {
-  const search = document.getElementById("searchInput").value.toLowerCase();
-  const rows = document.querySelectorAll("#userTableBody tr");
-  rows.forEach(row => {
-    const emailCell = row.querySelector("td");
-    row.style.display = emailCell && emailCell.innerText.toLowerCase().includes(search) ? "" : "none";
-  });
-}
-
-auth.onAuthStateChanged(user => {
-  if (!user) {
-    window.location.href = "login.html";
-    return;
-  }
-
-  //Role check
-  db.ref("users/" + user.uid).once("value").then(snapshot => {
-    if (snapshot.val()?.role !== "admin") {
-      window.location.href = "dashboard.html";
-    }
-  });
-
-  db.ref("users").once("value").then(snapshot => {
-    const users = snapshot.val();
-    const tbody = document.getElementById("userTableBody");
-    window.allUserData = [];
-
-    for (let uid in users) {
-      const user = users[uid];
-      let totalLiters = 0;
-      if (user.usage) {
-        for (let date in user.usage) {
-          totalLiters += user.usage[date];
-        }
-      }
-      const totalPrice = calculateTieredPrice(totalLiters);
-      window.allUserData.push({ email: user.email, totalLiters, totalPrice });
-
-      const row = document.createElement("tr");
-      row.innerHTML = `
-        <td>${user.email}</td>
-        <td>${totalLiters}</td>
-        <td>RM ${totalPrice}</td>
-        <td>
-          <button onclick="resetUsage('${uid}')">Reset</button>
-          <button onclick="deleteUser('${uid}')">Delete</button>
-        </td>`;
-      tbody.appendChild(row);
-    }
-  });
-});

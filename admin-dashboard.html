@@ -14,14 +14,13 @@
 <body>
   <header>
     <h1>Admin Dashboard</h1>
+    <!-- This button will call the logout() function from our .js file -->
     <button onclick="logout()">Logout</button>
   </header>
 
   <main class="dashboard">
     <h2>User Management</h2>
-
     <input type="text" id="searchInput" placeholder="Search user by email" oninput="filterUsers()" style="width: 100%; padding: 10px; margin: 15px 0; font-size: 16px;">
-
     <table>
       <thead>
         <tr>
@@ -32,25 +31,21 @@
         </tr>
       </thead>
       <tbody id="userTableBody">
-        <!-- Filled by JS -->
+        <!-- Table body is filled by admin-dashboard.js -->
       </tbody>
     </table>
-
     <button onclick="downloadCSV()">Download All as CSV</button>
   </main>
 
-  <!-- Logout-->
-  <script>
-    const auth = firebase.auth();
-    function logout() {
-      auth.signOut().then(() => {
-        window.location.href = "login.html";
-      }).catch((error) => {
-        alert("Logout error: " + error.message);
-      });
-    }
-  </script>
-
+  <!-- === THIS SECTION HAS BEEN REMOVED TO FIX THE ERROR === -->
+  <!--
+    <script>
+      const auth = firebase.auth(); ...
+    </script>
+  -->
+  
+  <!-- Load the main JavaScript file for this page -->
   <script src="admin-dashboard.js"></script>
+
 </body>
 </html>

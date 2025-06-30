@@ -1,53 +1,68 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Dashboard</title>
+  
+  <!-- Your Stylesheet -->
   <link rel="stylesheet" href="style.css" />
-  <!-- Firebase & Chart Libraries -->
+
+  <!-- === JAVASCRIPT LIBRARIES === -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  
+  <!-- PDF Generation Library (jsPDF) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
+  <!-- Charting Library (Chart.js) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Your Firebase Project Configuration (MUST be before your own scripts) -->
   <script src="firebase-config.js"></script>
 </head>
+
 <body>
+
   <header>
     <h1>User Dashboard</h1>
+    <!-- The onclick="logout()" function now exists in dashboard.js -->
     <button onclick="logout()">Logout</button>
   </header>
 
   <main class="dashboard">
+    
+    <!-- Welcome message and core stats -->
     <p>Welcome, <span id="userEmail">-</span></p>
     <p>Water Used: <span id="liters">0</span> L</p>
-    <p>Total Price: RM <span id="price">0</span></p>
+    <p>Total Price: RM <span id="price">0.00</span></p>
+    
+    <!-- Informational text for billing tiers -->
     <p style="font-size: 14px; color: #1b8694;">
       (First 20m³ × RM0.57, next 15m³ × RM1.03, rest × RM2.00)
     </p>
 
+    <!-- The Canvas element where Chart.js will draw the chart -->
     <canvas id="usageChart" width="400" height="200" style="margin-top:20px;"></canvas>
 
+    <!-- Action buttons -->
     <div style="margin-top: 20px;">
+      <!-- These onclick functions are defined in dashboard.js and extras.js -->
       <button onclick="fakePay()">Pay Bill</button>
       <button onclick="downloadPDF()">Download PDF</button>
       <button onclick="downloadCSV()">Export CSV</button>
     </div>
+    
   </main>
 
-  <!-- Logout-->
-  <script>
-    const auth = firebase.auth();
-    function logout() {
-      auth.signOut().then(() => {
-        window.location.href = "login.html";
-      }).catch((error) => {
-        alert("Logout error: " + error.message);
-      });
-    }
-  </script>
-
+  <!-- === YOUR SCRIPT FILES === -->
+  <!-- Load your main logic script -->
   <script src="dashboard.js"></script>
+  
+  <!-- Load your extra functions (for PDF, CSV, etc.) -->
   <script src="extras.js"></script>
+
 </body>
 </html>
