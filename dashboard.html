@@ -4,65 +4,75 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Dashboard</title>
-  
-  <!-- Your Stylesheet -->
   <link rel="stylesheet" href="style.css" />
-
-  <!-- === JAVASCRIPT LIBRARIES === -->
-  <!-- Firebase SDKs -->
+  <!-- Library Scripts -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  
-  <!-- PDF Generation Library (jsPDF) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  
-  <!-- Charting Library (Chart.js) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  
-  <!-- Your Firebase Project Configuration (MUST be before your own scripts) -->
+  <!-- Local Config -->
   <script src="firebase-config.js"></script>
+
+  <!-- Notification Styling -->
+  <style>
+    .leak-notification {
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeeba;
+        border-radius: 8px;
+        padding: 15px 20px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        z-index: 1000;
+        max-width: 350px;
+        align-items: center; /* Use flexbox alignment */
+        gap: 15px;
+    }
+    .leak-notification-icon { font-size: 24px; }
+    .leak-notification-close {
+        position: absolute;
+        top: 5px; right: 10px;
+        font-size: 20px; cursor: pointer; color: #856404;
+    }
+  </style>
 </head>
-
 <body>
-
   <header>
     <h1>User Dashboard</h1>
-    <!-- The onclick="logout()" function now exists in dashboard.js -->
     <button onclick="logout()">Logout</button>
   </header>
-
   <main class="dashboard">
-    
-    <!-- Welcome message and core stats -->
     <p>Welcome, <span id="userEmail">-</span></p>
-    <p>Water Used: <span id="liters">0</span> L</p>
-    <p>Total Price: RM <span id="price">0.00</span></p>
-    
-    <!-- Informational text for billing tiers -->
+    <p>Current Flow Rate: <span id="flowRate">0.00</span> L/m</p>
+    <p>Total Water Used: <span id="liters">0.00</span> L</p>
+    <p>Estimated Bill: RM <span id="price">0.00</span></p>
     <p style="font-size: 14px; color: #1b8694;">
       (First 20m³ × RM0.57, next 15m³ × RM1.03, rest × RM2.00)
     </p>
-
-    <!-- The Canvas element where Chart.js will draw the chart -->
     <canvas id="usageChart" width="400" height="200" style="margin-top:20px;"></canvas>
-
-    <!-- Action buttons -->
     <div style="margin-top: 20px;">
-      <!-- These onclick functions are defined in dashboard.js and extras.js -->
       <button onclick="fakePay()">Pay Bill</button>
       <button onclick="downloadPDF()">Download PDF</button>
       <button onclick="downloadCSV()">Export CSV</button>
     </div>
     
+    <!-- Leak Notification Popup -->
+    <div id="leak-notification" class="leak-notification">
+        <span class="leak-notification-icon">⚠️</span>
+        <div>
+            <strong>Potential Leak Detected</strong>
+            <p>Water has been flowing at a low rate for an extended time. Please check taps, toilets, and other fixtures.</p>
+        </div>
+        <span class="leak-notification-close" onclick="hideLeakNotification()">×</span>
+    </div>
+
   </main>
-
-  <!-- === YOUR SCRIPT FILES === -->
-  <!-- Load your main logic script -->
+  <!-- Main Logic Scripts -->
   <script src="dashboard.js"></script>
-  
-  <!-- Load your extra functions (for PDF, CSV, etc.) -->
   <script src="extras.js"></script>
-
 </body>
 </html>

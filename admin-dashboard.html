@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin Dashboard</title>
   <link rel="stylesheet" href="style-dashboard.css">
-  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -14,10 +13,8 @@
 <body>
   <header>
     <h1>Admin Dashboard</h1>
-    <!-- This button will call the logout() function from our .js file -->
     <button onclick="logout()">Logout</button>
   </header>
-
   <main class="dashboard">
     <h2>User Management</h2>
     <input type="text" id="searchInput" placeholder="Search user by email" oninput="filterUsers()" style="width: 100%; padding: 10px; margin: 15px 0; font-size: 16px;">
@@ -25,27 +22,15 @@
       <thead>
         <tr>
           <th>Email</th>
-          <th>Water Used (L)</th>
-          <th>Total (RM)</th>
-          <th>Actions</th>
+          <th>Total Usage (L)</th>
+          <th>Total Bill (RM)</th>
+          <th>Admin Actions</th>
         </tr>
       </thead>
-      <tbody id="userTableBody">
-        <!-- Table body is filled by admin-dashboard.js -->
-      </tbody>
+      <tbody id="userTableBody"></tbody>
     </table>
-    <button onclick="downloadCSV()">Download All as CSV</button>
+    <button onclick="downloadCSV()">Download All User Data as CSV</button>
   </main>
-
-  <!-- === THIS SECTION HAS BEEN REMOVED TO FIX THE ERROR === -->
-  <!--
-    <script>
-      const auth = firebase.auth(); ...
-    </script>
-  -->
-  
-  <!-- Load the main JavaScript file for this page -->
   <script src="admin-dashboard.js"></script>
-
 </body>
 </html>
