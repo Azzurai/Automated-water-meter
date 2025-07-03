@@ -1,61 +1,76 @@
 // ==========================================================
-//  EXTRAS.JS - CORRECTED CHART SIZING
+//  EXTRAS.JS - FINAL VERSION with DETAILED PDF RESTORED
 // ==========================================================
 
-// Global variables populated by dashboard.js
-var myUsageChart; 
-var dailyUsageGlobal = {}; 
+// Global variables that are populated by dashboard.js
+var myUsageChart;
+var dailyUsageGlobal = {};
+// This holds the total accumulated litres, set by dashboard.js. Crucial for the payBill function.
+var totalAccumulatedLitres = 0;
 
 /**
- * Renders or updates a line chart with the CORRECT size.
- * @param {object} dailyUsage - Object with dates as keys and usage as values.
+ * --- REAL PAYMENT FUNCTION ---
+ * Handles the 'Pay Bill' button click by updating the user's profile in Firebase.
+ */
+async function payBill() {
+    const currentUser = firebase.auth().currentUser;
+    if (!currentUser) {
+        alert("Error: You must be logged in to pay a bill.");
+        return;
+    }
+
+    if (confirm("This will mark your current bill as paid and reset the amount due to zero. Are you sure?")) {
+        try {
+            const userProfileRef = firebase.database().ref('users/' + currentUser.uid);
+            // Update the 'usageAtLastPayment' field with the current total.
+            await userProfileRef.update({
+                usageAtLastPayment: totalAccumulatedLitres
+            });
+
+            alert("Payment successful! Your bill has been reset.");
+            location.reload(); // Reload the page to show the changes.
+
+        } catch (error) {
+            console.error("Payment failed:", error);
+            alert("An error occurred while processing your payment.");
+        }
+    }
+}
+
+
+/**
+ * Renders or updates a line chart with the correct size.
  */
 function updateChart(dailyUsage) {
   const labels = Object.keys(dailyUsage).sort();
   const data = labels.map(label => dailyUsage[label]);
   const ctx = document.getElementById('usageChart').getContext('2d');
   
-  if (myUsageChart) {
-    myUsageChart.destroy();
-  }
+  if (myUsageChart) { myUsageChart.destroy(); }
   
   myUsageChart = new Chart(ctx, {
     type: 'line',
     data: {
       labels: labels,
       datasets: [{
-        label: 'Daily Water Usage (Liters)',
-        data: data,
-        fill: true,
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        borderColor: 'rgb(75, 192, 192)',
-        borderWidth: 2,
-        tension: 0.1
+        label: 'Daily Water Usage (Liters)', data: data, fill: true,
+        backgroundColor: 'rgba(75, 192, 192, 0.2)', borderColor: 'rgb(75, 192, 192)',
+        borderWidth: 2, tension: 0.1
       }]
     },
     options: {
       responsive: true,
-      // The key fix: This forces the chart to keep the aspect ratio
-      // defined by the width/height attributes on the <canvas> tag.
-      maintainAspectRatio: true,
-      
+      maintainAspectRatio: true, // This fixes the chart size
       scales: { 
-        y: { 
-          beginAtZero: true,
-          title: { display: true, text: 'Liters Used' }
-        },
-        x: {
-          title: { display: true, text: 'Date' }
-        }
-      },
-      plugins: {
-        legend: { display: true, position: 'top' }
+        y: { beginAtZero: true, title: { display: true, text: 'Liters Used' } },
+        x: { title: { display: true, text: 'Date' } }
       }
     }
   });
 }
 
 /**
+ * --- YOUR DETAILED PDF FUNCTION, FULLY RESTORED ---
  * Generates and downloads a professional-looking PDF bill.
  */
 function downloadPDF() {
@@ -69,29 +84,34 @@ function downloadPDF() {
     const pageHeight = doc.internal.pageSize.height;
     let y = 20;
 
-    // Header
-    doc.setFont("helvetica", "bold"); doc.setFontSize(22);
+    // --- Header ---
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
     doc.text("Smart Water Utilities", 105, y, { align: "center" });
     y += 10;
-    doc.setFontSize(16); doc.text("Official Water Bill", 105, y, { align: "center" });
+    doc.setFontSize(16);
+    doc.text("Official Water Bill", 105, y, { align: "center" });
     y += 15;
-    doc.setLineWidth(0.5); doc.line(10, y, 200, y);
+    doc.setLineWidth(0.5);
+    doc.line(10, y, 200, y);
 
-    // Bill Details
+    // --- Bill Details ---
     y += 10;
     const today = new Date();
     const billDate = today.toISOString().split('T')[0];
     const billNumber = `INV-${today.getTime().toString().slice(-6)}`;
     
-    doc.setFontSize(10); doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
     doc.text("Bill Number:", 10, y); doc.text(billNumber, 50, y);
     doc.text("Bill Date:", 140, y); doc.text(billDate, 170, y);
     
     y += 7;
-    doc.setFont("helvetica", "bold"); doc.text("BILL TO:", 10, y);
+    doc.setFont("helvetica", "bold");
+    doc.text("BILL TO:", 10, y);
     doc.setFont("helvetica", "normal"); doc.text(userEmail, 50, y);
     
-    // Table of Charges
+    // --- Table of Charges ---
     y += 15;
     doc.setLineWidth(0.5); doc.line(10, y, 200, y); y += 7;
     doc.setFont("helvetica", "bold");
@@ -125,14 +145,14 @@ function downloadPDF() {
       doc.text((tier3Usage * tier3Rate).toFixed(2), 200, y, { align: 'right' }); y += 7;
     }
     
-    // Total
+    // --- Total ---
     y += 5;
     doc.setLineWidth(0.5); doc.line(130, y, 200, y); y += 7;
     doc.setFont("helvetica", "bold"); doc.setFontSize(12);
     doc.text("Total Amount Due", 130, y);
     doc.text(`RM ${finalPrice}`, 200, y, { align: 'right' });
 
-    // Footer
+    // --- Footer ---
     y = pageHeight - 30;
     doc.setFontSize(10); doc.setFont("helvetica", "normal");
     doc.setLineWidth(0.5); doc.line(10, y, 200, y); y += 10;
@@ -147,6 +167,7 @@ function downloadPDF() {
   }
 }
 
+
 /**
  * Calculates the water bill based on tiered pricing.
  */
@@ -158,6 +179,7 @@ function calculateTieredPrice(totalLiters) {
   else { price = (20 * 0.57) + (15 * 1.03) + ((totalM3 - 35) * 2.00); }
   return price.toFixed(2);
 }
+
 
 /**
  * Compiles and downloads the user's daily usage data as a CSV file.
@@ -173,11 +195,4 @@ function downloadCSV() {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-}
-
-/**
- * A demonstration payment handler for the "Pay Bill" button.
- */
-function fakePay() {
-  alert("Payment Successful! (This is a demonstration only)");
 }
