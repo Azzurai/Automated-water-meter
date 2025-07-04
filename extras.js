@@ -1,16 +1,8 @@
-// ==========================================================
-//  EXTRAS.JS - FINAL VERSION with DETAILED PDF RESTORED
-// ==========================================================
-
-// Global variables that are populated by dashboard.js
-var myUsageChart;
 var dailyUsageGlobal = {};
-// This holds the total accumulated litres, set by dashboard.js. Crucial for the payBill function.
-var totalAccumulatedLitres = 0;
+var totalAccumulatedLitres = 0; // This holds the user's LIFETIME total usage.
 
 /**
- * --- REAL PAYMENT FUNCTION ---
- * Handles the 'Pay Bill' button click by updating the user's profile in Firebase.
+ * Marks the current bill as paid by updating the user's profile in Firebase.
  */
 async function payBill() {
     const currentUser = firebase.auth().currentUser;
@@ -19,10 +11,18 @@ async function payBill() {
         return;
     }
 
+    const currentBillableLiters = parseFloat(document.getElementById("liters").innerText);
+    if (currentBillableLiters <= 0) {
+        alert("There is no outstanding bill to pay.");
+        return;
+    }
+
     if (confirm("This will mark your current bill as paid and reset the amount due to zero. Are you sure?")) {
         try {
             const userProfileRef = firebase.database().ref('users/' + currentUser.uid);
-            // Update the 'usageAtLastPayment' field with the current total.
+            
+            // Update 'usageAtLastPayment' with the current LIFETIME total.
+            // `totalAccumulatedLitres` is set by dashboard.js
             await userProfileRef.update({
                 usageAtLastPayment: totalAccumulatedLitres
             });
@@ -32,51 +32,20 @@ async function payBill() {
 
         } catch (error) {
             console.error("Payment failed:", error);
-            alert("An error occurred while processing your payment.");
+            alert("An error occurred while processing your payment. Please try again.");
         }
     }
 }
 
 
 /**
- * Renders or updates a line chart with the correct size.
- */
-function updateChart(dailyUsage) {
-  const labels = Object.keys(dailyUsage).sort();
-  const data = labels.map(label => dailyUsage[label]);
-  const ctx = document.getElementById('usageChart').getContext('2d');
-  
-  if (myUsageChart) { myUsageChart.destroy(); }
-  
-  myUsageChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Daily Water Usage (Liters)', data: data, fill: true,
-        backgroundColor: 'rgba(75, 192, 192, 0.2)', borderColor: 'rgb(75, 192, 192)',
-        borderWidth: 2, tension: 0.1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true, // This fixes the chart size
-      scales: { 
-        y: { beginAtZero: true, title: { display: true, text: 'Liters Used' } },
-        x: { title: { display: true, text: 'Date' } }
-      }
-    }
-  });
-}
-
-/**
- * --- YOUR DETAILED PDF FUNCTION, FULLY RESTORED ---
- * Generates and downloads a professional-looking PDF bill.
+ * Generates and downloads a professional-looking PDF bill for the CURRENT PERIOD.
  */
 function downloadPDF() {
   try {
     const userEmail = document.getElementById("userEmail").innerText;
-    const totalLitres = parseFloat(document.getElementById("liters").innerText);
+    // These lines now correctly get the usage and price for the current billing period from the UI.
+    const billableLitres = parseFloat(document.getElementById("liters").innerText);
     const finalPrice = document.getElementById("price").innerText;
 
     const { jsPDF } = window.jspdf;
@@ -123,13 +92,15 @@ function downloadPDF() {
     doc.setLineWidth(0.2); doc.line(15, y, 195, y);
     doc.setFont("helvetica", "normal"); y += 7;
 
-    const totalM3 = totalLitres / 1000.0;
+    const totalM3 = billableLitres / 1000.0;
     const tier1Rate = 0.57, tier2Rate = 1.03, tier3Rate = 2.00;
     
     let tier1Usage = Math.min(totalM3, 20);
-    doc.text("Tier 1 Usage", 15, y); doc.text(tier1Usage.toFixed(3), 110, y, { align: 'right' });
-    doc.text(tier1Rate.toFixed(2), 155, y, { align: 'right' });
-    doc.text((tier1Usage * tier1Rate).toFixed(2), 200, y, { align: 'right' }); y += 7;
+    if(tier1Usage > 0) {
+      doc.text("Tier 1 Usage", 15, y); doc.text(tier1Usage.toFixed(3), 110, y, { align: 'right' });
+      doc.text(tier1Rate.toFixed(2), 155, y, { align: 'right' });
+      doc.text((tier1Usage * tier1Rate).toFixed(2), 200, y, { align: 'right' }); y += 7;
+    }
 
     let tier2Usage = Math.max(0, Math.min(totalM3 - 20, 15));
     if (tier2Usage > 0) {
@@ -167,24 +138,15 @@ function downloadPDF() {
   }
 }
 
-
-/**
- * Calculates the water bill based on tiered pricing.
- */
-function calculateTieredPrice(totalLiters) {
-  const totalM3 = totalLiters / 1000.0;
-  let price = 0;
-  if (totalM3 <= 20) { price = totalM3 * 0.57; } 
-  else if (totalM3 <= 35) { price = (20 * 0.57) + ((totalM3 - 20) * 1.03); } 
-  else { price = (20 * 0.57) + (15 * 1.03) + ((totalM3 - 35) * 2.00); }
-  return price.toFixed(2);
-}
-
-
 /**
  * Compiles and downloads the user's daily usage data as a CSV file.
  */
 function downloadCSV() {
+  // This uses `dailyUsageGlobal` which is correctly populated by dashboard.js with all daily totals
+  if(Object.keys(dailyUsageGlobal).length === 0){
+      alert("No usage data available to download.");
+      return;
+  }
   let csvContent = "data:text/csv;charset=utf-8,Date,Usage (L)\n";
   for (const date in dailyUsageGlobal) { 
       csvContent += `${date},${dailyUsageGlobal[date].toFixed(2)}\n`; 

@@ -1,9 +1,12 @@
 const auth = firebase.auth();
 const db = firebase.database();
 
-const NOTIFICATION_TRIGGER_COUNT = 5;
-let zeroFlowCounter = 0;
 let chartInstance = null;
+let currentChartView = 'daily';
+
+// Throttling Variables
+let isThrottled = false;
+const UI_UPDATE_INTERVAL = 10000; // 10,000ms = 10 seconds
 
 auth.onAuthStateChanged(user => {
     if (!user) { window.location.href = "login.html"; return; }
@@ -21,59 +24,62 @@ auth.onAuthStateChanged(user => {
         const usageRef = db.ref("meter_readings/" + meterId);
         
         usageRef.on("value", dataSnapshot => {
+            if (isThrottled) { return; }
+            isThrottled = true;
+            setTimeout(() => { isThrottled = false; }, UI_UPDATE_INTERVAL);
+
             const rawReadings = dataSnapshot.val();
-            if (!rawReadings) return;
+            if (!rawReadings) {
+                document.getElementById("liters").innerText = "0.00";
+                document.getElementById("totalLiters").innerText = "0.00"; 
+                document.getElementById("price").innerText = "0.00";
+                hideLeakNotification();
+                return;
+            };
 
             const readingsArray = Object.values(rawReadings).sort((a, b) => a.timestamp - b.timestamp);
             const latestReading = readingsArray[readingsArray.length - 1];
             const currentFlowRate = latestReading.flowRate || 0;
 
-            // Leak Detection Logic
-            if (currentFlowRate < 0.01) {
-                zeroFlowCounter++;
-                console.log(`Water is OFF. Notification counter at: ${zeroFlowCounter} / ${NOTIFICATION_TRIGGER_COUNT}`);
+            if (currentFlowRate < 2 && currentFlowRate > 0) { 
+                showLeakNotification();
             } else {
-                zeroFlowCounter = 0;
                 hideLeakNotification();
             }
 
-            if (zeroFlowCounter >= NOTIFICATION_TRIGGER_COUNT) {
-                console.log("TRIGGER REACHED! Showing notification for presentation.");
-                showLeakNotification();
-            }
-
-            const dailyData = aggregateReadingsByDay(rawReadings);
-            const totalLiters = Object.values(dailyData).reduce((sum, val) => sum + val, 0);
-
-            window.dailyUsageGlobal = dailyData;
-            window.readingsRaw = rawReadings;
+            const totalLifetimeLiters = Object.values(rawReadings).reduce((sum, reading) => sum + (reading.value || 0), 0);
+            const billableLiters = totalLifetimeLiters - usageAtLastPayment;
+            
+            window.totalAccumulatedLitres = totalLifetimeLiters;
+            window.readingsRaw = rawReadings; 
 
             document.getElementById("flowRate").innerText = currentFlowRate.toFixed(2);
-            document.getElementById("liters").innerText = totalLiters.toFixed(2);
-            document.getElementById("price").innerText = calculateTieredPrice(totalLiters);
-            updateChart(dailyData, "Daily Water Usage (L)");
+            document.getElementById("liters").innerText = billableLiters.toFixed(2); 
+            document.getElementById("totalLiters").innerText = totalLifetimeLiters.toFixed(2);
+            document.getElementById("price").innerText = calculateTieredPrice(billableLiters);
+            
+            redrawChartBasedOnState();
         });
     });
 });
 
-// --- Chart Updating ---
 function updateChart(data, label = "Water Usage (L)") {
     const ctx = document.getElementById('usageChart').getContext('2d');
-    const labels = Object.keys(data);
-    const values = Object.values(data);
-
+    const labels = Object.keys(data).sort();
+    const values = labels.map(label => data[label]);
     if (chartInstance) chartInstance.destroy();
-
     chartInstance = new Chart(ctx, {
-        type: 'bar',
+        type: 'line',
         data: {
             labels: labels,
             datasets: [{
                 label: label,
                 data: values,
+                fill: true,
+                backgroundColor: 'rgba(2, 136, 209, 0.2)',
                 borderColor: '#0288d1',
-                backgroundColor: 'rgba(2, 136, 209, 0.5)',
-                fill: true
+                borderWidth: 2,
+                tension: 0.1
             }]
         },
         options: {
@@ -87,7 +93,25 @@ function updateChart(data, label = "Water Usage (L)") {
     });
 }
 
-// --- Aggregation Helpers ---
+function redrawChartBasedOnState() {
+    if (!window.readingsRaw) return; 
+
+    if (currentChartView === 'daily') {
+        const dailyData = aggregateReadingsByDay(window.readingsRaw);
+        updateChart(dailyData, "Daily Water Usage (L)");
+    } else if (currentChartView === 'weekly') {
+        const weeklyData = aggregateReadingsByWeek(window.readingsRaw);
+        updateChart(weeklyData, "Weekly Water Usage (L)");
+    } else if (currentChartView === 'monthly') { 
+        const monthlyData = aggregateReadingsByMonth(window.readingsRaw);
+        updateChart(monthlyData, "Monthly Water Usage (L)");
+    } else if (currentChartView === 'yearly') {
+        const yearlyData = aggregateReadingsByYear(window.readingsRaw);
+        updateChart(yearlyData, "Yearly Water Usage (L)");
+    }
+}
+
+// --- AGGREGATION HELPERS ---
 function aggregateReadingsByDay(readings) {
     const dailyData = {};
     Object.values(readings).forEach(r => {
@@ -103,17 +127,35 @@ function aggregateReadingsByWeek(readings) {
         const date = new Date(r.timestamp);
         const year = date.getFullYear();
         const week = getWeekNumber(date);
-        const weekKey = `${year}-W${week}`;
-        weeklyData[weekKey] = (weeklyData[weekKey] || 0) + r.value;
+        const weekKey = `${year}-W${String(week).padStart(2, '0')}`;
+        weeklyData[weekKey] = (weeklyData[weekKey] || 0) + (r.value || 0);
     });
-    return weeklyData;
+    const orderedWeeklyData = {};
+    Object.keys(weeklyData).sort().forEach(key => {
+        orderedWeeklyData[key] = weeklyData[key];
+    });
+    return orderedWeeklyData;
+}
+
+// --- NEW FUNCTION TO AGGREGATE BY MONTH ---
+function aggregateReadingsByMonth(readings) {
+    const monthlyData = {};
+    Object.values(readings).forEach(r => {
+        const date = new Date(r.timestamp);
+        const year = date.getFullYear();
+        // getMonth() is 0-indexed (Jan=0), so add 1. Pad with '0' for correct sorting.
+        const month = String(date.getMonth() + 1).padStart(2, '0'); 
+        const monthKey = `${year}-${month}`; // e.g., "2024-05"
+        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + (r.value || 0);
+    });
+    return monthlyData;
 }
 
 function aggregateReadingsByYear(readings) {
     const yearlyData = {};
     Object.values(readings).forEach(r => {
         const year = new Date(r.timestamp).getFullYear();
-        yearlyData[year] = (yearlyData[year] || 0) + r.value;
+        yearlyData[year] = (yearlyData[year] || 0) + (r.value || 0);
     });
     return yearlyData;
 }
@@ -126,25 +168,50 @@ function getWeekNumber(d) {
     return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
 }
 
-// --- Notification ---
+
+// --- Unchanged Functions ---
+function showLeakNotification() { /* ... */ }
+function hideLeakNotification() { /* ... */ }
+function logout() { /* ... */ }
+function calculateTieredPrice(totalLiters) { /* ... */ }
+
+
+// --- UPDATED BUTTON LISTENERS ---
+document.getElementById("dailyButton").addEventListener("click", () => {
+    currentChartView = 'daily';
+    redrawChartBasedOnState();
+});
+
+document.getElementById("weeklyButton").addEventListener("click", () => {
+    currentChartView = 'weekly';
+    redrawChartBasedOnState();
+});
+
+// ADDED LISTENER FOR MONTH BUTTON
+document.getElementById("monthlyButton").addEventListener("click", () => {
+    currentChartView = 'monthly';
+    redrawChartBasedOnState();
+});
+
+document.getElementById("yearlyButton").addEventListener("click", () => {
+    currentChartView = 'yearly';
+    redrawChartBasedOnState();
+});
+
+// Helper functions (hide/show notification, logout, etc.) remain unchanged
 function showLeakNotification() {
     const n = document.getElementById('leak-notification');
     if (n) n.style.display = 'flex';
 }
-
 function hideLeakNotification() {
     const n = document.getElementById('leak-notification');
     if (n) n.style.display = 'none';
 }
-
-// --- Logout ---
 function logout() {
     auth.signOut().then(() => {
         window.location.href = "login.html";
     });
 }
-
-// --- Tiered Pricing ---
 function calculateTieredPrice(totalLiters) {
     const totalCubicMeters = totalLiters / 1000;
     let price = 0;
@@ -157,17 +224,3 @@ function calculateTieredPrice(totalLiters) {
     }
     return price.toFixed(2);
 }
-
-// --- Button Actions ---
-document.getElementById("dailyButton").addEventListener("click", () => {
-    const daily = aggregateReadingsByDay(window.readingsRaw);
-    updateChart(daily, "Daily Water Usage (L)");
-});
-document.getElementById("weeklyButton").addEventListener("click", () => {
-    const weekly = aggregateReadingsByWeek(window.readingsRaw);
-    updateChart(weekly, "Weekly Water Usage (L)");
-});
-document.getElementById("yearlyButton").addEventListener("click", () => {
-    const yearly = aggregateReadingsByYear(window.readingsRaw);
-    updateChart(yearly, "Yearly Water Usage (L)");
-});

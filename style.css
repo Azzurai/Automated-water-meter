@@ -85,3 +85,54 @@ canvas#usageChart {
     flex-direction: column;
   }
 }
+
+/* This targets the main notification container by its ID */
+#leak-notification {
+  /* --- Positioning --- */
+  position: fixed;
+  top: 90px; /* MODIFIED: Moved down to avoid blocking the header */
+  right: 20px;
+  z-index: 1000;
+
+  /* --- Sizing --- */
+  max-width: 380px;
+  width: auto;     
+
+  /* --- Appearance --- */
+  background-color: #fffbe6;     
+  border: 1px solid #ffe58f;      
+  border-radius: 8px;             
+  padding: 16px;                  
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); 
+  color: #5c3c00;                 
+
+  /* --- Internal Layout (Flexbox) --- */
+  display: flex;        
+  align-items: center;  
+  gap: 15px;           
+}
+
+.leak-notification-icon {
+  font-size: 28px;
+}
+
+#leak-notification div p {
+    margin: 4px 0 0 0; 
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.leak-notification-close {
+  position: absolute;   
+  top: 5px;              
+  right: 10px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #aaa;
+  cursor: pointer;        
+  transition: color 0.2s; 
+}
+
+.leak-notification-close:hover {
+  color: #333; 
+}
