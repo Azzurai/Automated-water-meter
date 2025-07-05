@@ -1,11 +1,25 @@
+/* === BODY WITH BACKGROUND IMAGE AND OVERLAY === */
 body {
   margin: 0;
   padding: 0;
   font-family: 'Segoe UI', sans-serif;
-  background: linear-gradient(to bottom right, #e0f7fa, #ffffff);
+  background: url('images/user-water.jpg') no-repeat center center fixed;
+  background-size: cover;
   color: #333;
+  position: relative;
 }
 
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.3); /* Light overlay */
+  z-index: -1;
+}
+
+/* === HEADER === */
 header {
   background-color: #0288d1;
   color: white;
@@ -34,14 +48,17 @@ header button {
   cursor: pointer;
 }
 
+/* === MAIN DASHBOARD CONTAINER === */
 main.dashboard {
   max-width: 600px;
   margin: 60px auto;
-  background: white;
+  background: rgba(255, 255, 255, 0.85); /* Semi-transparent white */
   padding: 30px;
   border-radius: 10px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
   text-align: center;
+  position: relative;
+  z-index: 1;
 }
 
 main.dashboard p {
@@ -49,6 +66,7 @@ main.dashboard p {
   margin: 10px 0;
 }
 
+/* === BUTTONS === */
 button {
   padding: 10px 16px;
   margin: 10px 5px;
@@ -65,11 +83,13 @@ button:hover {
   background-color: #0277bd;
 }
 
+/* === RESPONSIVE CHART === */
 canvas#usageChart {
   margin-top: 20px;
   max-width: 100%;
 }
 
+/* === MOBILE RESPONSIVE === */
 @media (max-width: 600px) {
   main.dashboard {
     margin: 30px 20px;
@@ -86,30 +106,23 @@ canvas#usageChart {
   }
 }
 
-/* This targets the main notification container by its ID */
+/* === LEAK NOTIFICATION STYLES === */
 #leak-notification {
-  /* --- Positioning --- */
   position: fixed;
-  top: 90px; /* MODIFIED: Moved down to avoid blocking the header */
+  top: 90px;
   right: 20px;
   z-index: 1000;
-
-  /* --- Sizing --- */
   max-width: 380px;
-  width: auto;     
-
-  /* --- Appearance --- */
-  background-color: #fffbe6;     
-  border: 1px solid #ffe58f;      
-  border-radius: 8px;             
-  padding: 16px;                  
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); 
-  color: #5c3c00;                 
-
-  /* --- Internal Layout (Flexbox) --- */
-  display: flex;        
-  align-items: center;  
-  gap: 15px;           
+  width: auto;
+  background-color: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  color: #5c3c00;
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
 .leak-notification-icon {
@@ -117,22 +130,22 @@ canvas#usageChart {
 }
 
 #leak-notification div p {
-    margin: 4px 0 0 0; 
-    font-size: 14px;
-    line-height: 1.4;
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
 .leak-notification-close {
-  position: absolute;   
-  top: 5px;              
+  position: absolute;
+  top: 5px;
   right: 10px;
   font-size: 24px;
   font-weight: bold;
   color: #aaa;
-  cursor: pointer;        
-  transition: color 0.2s; 
+  cursor: pointer;
+  transition: color 0.2s;
 }
 
 .leak-notification-close:hover {
-  color: #333; 
+  color: #333;
 }
